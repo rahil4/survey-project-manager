@@ -42,12 +42,12 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config()
     if args.root:
         cfg.root = args.root
-    if not cfg.root or not Path(cfg.root).is_dir():
-        chosen = _choose_root()
-        if chosen is None:
-            return 0
-        cfg.root = str(chosen)
-    if not args.root:
+    else:
+        if not cfg.root or not Path(cfg.root).is_dir():
+            chosen = _choose_root()
+            if chosen is None:
+                return 0
+            cfg.root = str(chosen)
         save_config(cfg)
     Path(cfg.root).mkdir(parents=True, exist_ok=True)
 
