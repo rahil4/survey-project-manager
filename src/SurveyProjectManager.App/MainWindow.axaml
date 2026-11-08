@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:SurveyProjectManager.App"
+        x:Class="SurveyProjectManager.App.MainWindow"
+        Title="پوشه‌یار نقشه‌برداری"
+        Width="1280" Height="760" MinWidth="900" MinHeight="520"
+        FlowDirection="RightToLeft" FontSize="14"
+        FontFamily="Segoe UI, Tahoma, Vazirmatn, Arial"
+        Background="#F3F3F3">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="8,6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button x:Name="NewBtn" Content="+ پروژه جدید" Classes="primary" />
+        <Button x:Name="EditBtn" Content="ویرایش" />
+        <Button x:Name="RevealBtn" Content="بازکردن پوشه" />
+        <Button x:Name="CopyPathBtn" Content="کپی مسیر" />
+        <Button x:Name="ZipBtn" Content="بایگانی ZIP" />
+        <Button x:Name="CsvBtn" Content="فایل اکسل (CSV)" />
+        <Button x:Name="RootBtn" Content="تغییر پوشه اصلی" />
+      </StackPanel>
+    </Border>
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#DCDCDC" BorderThickness="0,1,0,0" Padding="12,3">
+      <TextBlock x:Name="StatusText" Classes="muted" />
+    </Border>
+
+    <Grid>
+      <!-- فهرست پروژه‌ها -->
+      <Grid x:Name="ListPage" ColumnDefinitions="210,10,*" Margin="10">
+        <ListBox x:Name="StatusList" Grid.Column="0" Background="White" BorderBrush="#DCDCDC" BorderThickness="1" />
+        <Grid Grid.Column="2" RowDefinitions="Auto,8,*">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox x:Name="SearchBox" Watermark="جستجو: نام مالک، پلاک، شماره پروژه…" />
+            <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Text="دوبار کلیک روی پروژه: ورود به پوشه آن" />
+          </Grid>
+          <DataGrid x:Name="ProjectGrid" Grid.Row="2" IsReadOnly="True" AutoGenerateColumns="False"
+                    SelectionMode="Single" GridLinesVisibility="None" CanUserSortColumns="True"
+                    Background="White" BorderBrush="#DCDCDC" BorderThickness="1" RowHeight="36">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="شماره" SortMemberPath="Number" Width="110">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="local:ProjectRow">
+                    <TextBlock Text="{Binding Number}" FlowDirection="LeftToRight" VerticalAlignment="Center" Margin="8,0" FontFamily="Consolas, Cascadia Mono, monospace" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="مالک" Binding="{Binding Owner}" Width="180" />
+              <DataGridTextColumn Header="موقعیت / پلاک" Binding="{Binding Location}" Width="*" />
+              <DataGridTextColumn Header="نوع کار" Binding="{Binding Type}" Width="150" />
+              <DataGridTemplateColumn Header="وضعیت" SortMemberPath="StatusLabel" Width="130">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="local:ProjectRow">
+                    <Border Background="{Binding StatusBackground}" CornerRadius="10" Padding="10,1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0">
+                      <TextBlock Text="{Binding StatusLabel}" Foreground="{Binding StatusForeground}" FontSize="13" />
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="تحویل" Binding="{Binding Due}" Width="110" />
+            </DataGrid.Columns>
+          </DataGrid>
+        </Grid>
+      </Grid>
+
+      <!-- داخل پروژه -->
+      <Grid x:Name="ProjectPage" IsVisible="False" RowDefinitions="Auto,8,*" Margin="10">
+        <Grid ColumnDefinitions="Auto,6,Auto,6,*,6,Auto,6,Auto">
+          <Button x:Name="BackBtn" Content="→ همه پروژه‌ها" />
+          <Button x:Name="UpBtn" Grid.Column="2" Content="↑ بالاتر" />
+          <TextBox x:Name="PathBox" Grid.Column="4" IsReadOnly="True" FlowDirection="LeftToRight" FontFamily="Consolas, Cascadia Mono, monospace" FontSize="13" />
+          <Button x:Name="CopyDirBtn" Grid.Column="6" Content="کپی مسیر" />
+          <Button x:Name="ExplorerBtn" Grid.Column="8" Content="بازکردن در Explorer" Classes="primary" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="300,10,*">
+          <Border Background="White" BorderBrush="#DCDCDC" BorderThickness="1" Padding="4">
+            <TreeView x:Name="FolderTree" FlowDirection="LeftToRight" Background="Transparent">
+              <TreeView.Styles>
+                <Style Selector="TreeViewItem">
+                  <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </Style>
+              </TreeView.Styles>
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="local:TreeNode" ItemsSource="{Binding Children}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="14" Height="11" CornerRadius="2" Background="{Binding IconBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Name}" FontFamily="Consolas, Cascadia Mono, monospace" FontSize="13" />
+                  </StackPanel>
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+          </Border>
+
+          <DockPanel Grid.Column="2">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+              <TextBlock x:Name="FolderTitle" FontSize="20" FontWeight="Bold" FlowDirection="LeftToRight" HorizontalAlignment="Right" FontFamily="Consolas, Cascadia Mono, monospace" />
+              <TextBlock x:Name="FolderSubtitle" Classes="muted" />
+            </StackPanel>
+            <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Text="دوبار کلیک: ورود به پوشه یا بازکردن فایل با برنامه پیش‌فرض · فایل را از Explorer اینجا بکشید تا کپی شود" />
+            <Border x:Name="DropZone" DragDrop.AllowDrop="True" Background="White" BorderBrush="#DCDCDC" BorderThickness="1">
+              <DataGrid x:Name="FileGrid" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                        GridLinesVisibility="None" CanUserSortColumns="False" RowHeight="34" Background="Transparent">
+                <DataGrid.Columns>
+                  <DataGridTemplateColumn Header="نام" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="local:FileRow">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0" VerticalAlignment="Center">
+                          <Border Width="14" Height="12" CornerRadius="2" Background="{Binding IconBrush}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Name}" FlowDirection="LeftToRight" FontFamily="Consolas, Cascadia Mono, monospace" FontSize="13" />
+                          <TextBlock Text="{Binding Note}" Classes="muted" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="نوع" Binding="{Binding Kind}" Width="150" />
+                  <DataGridTemplateColumn Header="حجم" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="local:FileRow">
+                        <TextBlock Text="{Binding SizeText}" FlowDirection="LeftToRight" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="تاریخ تغییر" Binding="{Binding DateText}" Width="120" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
+          </DockPanel>
+        </Grid>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</Window>

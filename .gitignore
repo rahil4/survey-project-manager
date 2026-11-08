@@ -1,7 +1,7 @@
-__pycache__/
-*.pyc
-.pytest_cache/
-build/
+bin/
+obj/
+*.user
+.vs/
 dist/
-*.spec
-.venv/
+publish/
+TestResults/
