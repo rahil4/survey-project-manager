@@ -8,7 +8,13 @@ public class CoreTests : IDisposable
 
     public CoreTests() => Directory.CreateDirectory(_tmp);
 
-    public void Dispose() => Directory.Delete(_tmp, recursive: true);
+    public void Dispose()
+    {
+        // ویندوز حذف فایل فقط‌خواندنی (مثل فایل‌های خام کپی‌شده) را رد می‌کند
+        foreach (var f in Directory.EnumerateFiles(_tmp, "*", SearchOption.AllDirectories))
+            File.SetAttributes(f, FileAttributes.Normal);
+        Directory.Delete(_tmp, recursive: true);
+    }
 
     [Theory]
     [InlineData(2026, 10, 28, 1405, 8, 6)]
