@@ -88,7 +88,7 @@ public static partial class ImportPlanner
             if (older.Count > 0)
             {
                 item.ArchiveOlder = older.Select(o => o.Path).ToList();
-                item.VersionNote = $"نسخه جدید v{mine.Groups["ver"].Value}؛ نسخه‌های قبلی به {ArchiveFolder} می‌روند";
+                item.VersionNote = "نسخه جدید نقشه؛ نسخه‌های قبلی به آرشیو می‌روند";
             }
             return;
         }
@@ -99,7 +99,7 @@ public static partial class ImportPlanner
         var next = latest.Ver + 1;
         item.TargetName = $"{latest.Base}_v{next.ToString().PadLeft(latest.Width, '0')}{ext}";
         item.ArchiveOlder = family.Select(o => o.Path).ToList();
-        item.VersionNote = $"نسخه جدید {Path.GetFileNameWithoutExtension(item.TargetName)[(latest.Base.Length + 1)..]}؛ نسخه‌های قبلی به {ArchiveFolder} می‌روند";
+        item.VersionNote = "نسخه جدید نقشه (شماره نسخه خودکار)؛ نسخه‌های قبلی به آرشیو می‌روند";
     }
 
     public static ImportResult Execute(string projectDir, IEnumerable<ImportItem> items)

@@ -198,7 +198,7 @@ public class FeatureTests : IDisposable
         var item = ImportPlanner.Plan(proj, new[] { v4 })[0];
         Assert.Equal("Plan_v04.dwg", item.TargetName);
         Assert.Equal(2, item.ArchiveOlder.Count); // v02 و v03 (پیشوند شماره پروژه نادیده گرفته شد)
-        Assert.Contains("v04", item.VersionNote);
+        Assert.Contains("آرشیو", item.VersionNote);
 
         var item2 = ImportPlanner.Plan(proj, new[] { plain })[0];
         Assert.Equal("1405-014_Plan_v04.dwg", item2.TargetName); // بدون شماره نسخه: خودکار v04
