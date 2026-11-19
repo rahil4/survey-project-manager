@@ -132,7 +132,7 @@ public static class PreviewBuilder
     public static Bitmap? RenderPdf(string path)
     {
         using var fs = File.OpenRead(path);
-        using var skBitmap = PDFtoImage.Conversion.ToImage(fs, page: 0, options: new PDFtoImage.RenderOptions(Width: 480));
+        using var skBitmap = PDFtoImage.Conversion.ToImage(fs, page: new Index(0), options: new PDFtoImage.RenderOptions(Width: 480));
         using var data = skBitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 90);
         using var ms = new MemoryStream(data.ToArray());
         return new Bitmap(ms);
