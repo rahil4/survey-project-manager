@@ -8,15 +8,22 @@ public sealed class Project
     public string Type { get; set; } = "";
     public string Status { get; set; } = "collect";
     public string Due { get; set; } = "";
-    public string Folder { get; set; } = "";   // مسیر نسبی با / (مثل 1405/1405-014_Ahmadi_Karaj)
+    public string Folder { get; set; } = "";   // مسیر نسبی با / (مثل 1405/1405-014_Ahmadi_Karaj) یا مسیر کامل برای پروژه ثبت‌شده در جای دیگر
     public string Note { get; set; } = "";
+    public string ClientId { get; set; } = ""; // متقاضی (سفارش‌دهنده)؛ Owner مالک ملک است
+    public string Related { get; set; } = "";  // شماره پروژه‌های مرتبط، با ; جدا می‌شوند
+
+    public IReadOnlyList<string> RelatedNumbers =>
+        Related.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public string StatusLabel => Statuses.Label(Status);
 
     public string Year => Number.Split('-')[0];
 
     public string FullPath(string root) =>
-        Path.Combine(new[] { root }.Concat(Folder.Split('/', StringSplitOptions.RemoveEmptyEntries)).ToArray());
+        Path.IsPathRooted(Folder)
+            ? Folder
+            : Path.Combine(new[] { root }.Concat(Folder.Split('/', StringSplitOptions.RemoveEmptyEntries)).ToArray());
 }
 
 public static class Statuses

@@ -9,6 +9,19 @@ public sealed class AppConfig
 
     public string Root { get; set; } = "";
     public string Crs { get; set; } = DefaultCrs;
+    public string BackupDest { get; set; } = "";
+    public int BackupRemindDays { get; set; } = 7;
+    public string LastBackup { get; set; } = "";          // yyyy-MM-dd HH:mm
+    public List<string> Recents { get; set; } = new();    // شماره پروژه‌های اخیراً باز شده، تازه‌ترین اول
+    public string Theme { get; set; } = "system";         // system | light | dark
+    public bool PersianDigits { get; set; } = true;
+
+    public void AddRecent(string number)
+    {
+        Recents.Remove(number);
+        Recents.Insert(0, number);
+        if (Recents.Count > 10) Recents.RemoveRange(10, Recents.Count - 10);
+    }
 
     public static string DefaultDirectory() =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SurveyProjectManager");

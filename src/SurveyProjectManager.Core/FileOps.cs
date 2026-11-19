@@ -10,6 +10,7 @@ public static class FileOps
         var inRaw = ProjectFolders.IsInRawFolder(projectDir, targetDir);
         var copied = new List<string>();
         var skipped = new List<string>();
+        Directory.CreateDirectory(targetDir);
         foreach (var src in sources)
         {
             var name = Path.GetFileName(src.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -31,13 +32,27 @@ public static class FileOps
         return new CopyResult(copied, skipped);
     }
 
-    private static void CopyDirectory(string src, string dest)
+    public static void CopyDirectory(string src, string dest)
     {
         Directory.CreateDirectory(dest);
         foreach (var file in Directory.GetFiles(src))
             File.Copy(file, Path.Combine(dest, Path.GetFileName(file)));
         foreach (var dir in Directory.GetDirectories(src))
             CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
+    }
+
+    /// <summary>اگر فایل وجود داشته باشد، به نام آن «_2»، «_3» … اضافه می‌کند.</summary>
+    public static string UniquePath(string path)
+    {
+        if (!File.Exists(path) && !Directory.Exists(path)) return path;
+        var dir = Path.GetDirectoryName(path) ?? "";
+        var stem = Path.GetFileNameWithoutExtension(path);
+        var ext = Path.GetExtension(path);
+        for (int i = 2; ; i++)
+        {
+            var candidate = Path.Combine(dir, $"{stem}_{i}{ext}");
+            if (!File.Exists(candidate) && !Directory.Exists(candidate)) return candidate;
+        }
     }
 
     public static void MakeReadOnly(string path)

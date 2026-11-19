@@ -48,7 +48,7 @@ public class CoreTests : IDisposable
         var p = new Project
         {
             Number = "1405-001", Owner = "آقای احمدی", Location = "کرج، پلاک ۱", Type = "تفکیک", Status = "draw",
-            Due = "1405/08/15", Folder = "1405/1405-001_Ahmdy_Krj", Note = "یادداشت, با \"ویرگول\"\nو خط جدید",
+            Due = "1405/08/15", Folder = "1405/1405-001_Ahmdy_Krj", Note = "یادداشت, با \"ویرگول\"\nو خط جدید", ClientId = "c7", Related = "1404-001;1404-002",
         };
         ProjectStore.Save(_tmp, new[] { p });
         var bytes = File.ReadAllBytes(ProjectStore.CsvPath(_tmp));
@@ -58,6 +58,8 @@ public class CoreTests : IDisposable
         Assert.Equal(p.Location, loaded.Location);
         Assert.Equal(p.Note, loaded.Note);
         Assert.Equal(p.Folder, loaded.Folder);
+        Assert.Equal("c7", loaded.ClientId);
+        Assert.Equal("1404-001;1404-002", loaded.Related);
         Assert.Empty(ProjectStore.Load(Path.Combine(_tmp, "missing")));
     }
 
@@ -66,7 +68,9 @@ public class CoreTests : IDisposable
     {
         var p = new Project { Number = "1405-002", Owner = "رضایی", Folder = ProjectFolders.RelativePath("1405-002", "Rzayy") };
         var dir = ProjectFolders.Create(_tmp, p, "UTM39");
-        foreach (var (name, _) in ProjectFolders.Subfolders) Assert.True(Directory.Exists(Path.Combine(dir, name)));
+        // فقط پوشه اصلی و README ساخته می‌شود؛ زیرپوشه‌ها بعداً و در صورت نیاز
+        Assert.Empty(Directory.GetDirectories(dir));
+        Assert.Equal(ProjectFolders.Subfolders.Count, ProjectFolders.MissingSubfolders(dir).Count());
         Assert.Contains("UTM39", File.ReadAllText(Path.Combine(dir, "README.txt")));
         Assert.True(ProjectFolders.IsInRawFolder(dir, Path.Combine(dir, ProjectFolders.RawFolder, "x.job")));
         Assert.False(ProjectFolders.IsInRawFolder(dir, Path.Combine(dir, "04_CAD", "x.dwg")));
@@ -83,7 +87,9 @@ public class CoreTests : IDisposable
         File.WriteAllText(src, "x");
 
         var cad = Path.Combine(dir, "04_CAD");
+        Assert.False(Directory.Exists(cad));
         Assert.Equal(new[] { "plan.dwg" }, FileOps.CopyInto(dir, cad, new[] { src }).Copied);
+        Assert.True(Directory.Exists(cad)); // با اولین فایل ساخته شد
         File.WriteAllText(Path.Combine(cad, "plan.dwg"), "changed");
         var again = FileOps.CopyInto(dir, cad, new[] { src });
         Assert.Equal(new[] { "plan.dwg" }, again.Skipped);
@@ -91,6 +97,7 @@ public class CoreTests : IDisposable
 
         var raw = Path.Combine(dir, ProjectFolders.RawFolder);
         FileOps.CopyInto(dir, raw, new[] { src });
+        Assert.True(Directory.Exists(raw));
         Assert.True(File.GetAttributes(Path.Combine(raw, "plan.dwg")).HasFlag(FileAttributes.ReadOnly));
     }
 
@@ -109,6 +116,7 @@ public class CoreTests : IDisposable
     {
         var p = new Project { Number = "1405-004", Folder = ProjectFolders.RelativePath("1405-004", "Z") };
         var dir = ProjectFolders.Create(_tmp, p, "UTM39");
+        File.WriteAllText(Path.Combine(dir, "x.txt"), "x");
         var zip = FileOps.Archive(_tmp, dir);
         Assert.True(File.Exists(zip));
         Assert.True(new FileInfo(zip).Length > 0);
