@@ -93,11 +93,20 @@ public sealed class ProjectsView : UserControl
             }),
         });
         _grid.DoubleTapped += (_, _) => OpenSelected();
-        _grid.KeyDown += (_, e) => { if (e.Key == Key.Enter) { OpenSelected(); e.Handled = true; } };
+        _grid.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { OpenSelected(); e.Handled = true; }
+            else if (e.Key == Key.Delete) { DeleteSelected(); e.Handled = true; }
+        };
         _grid.ContextMenu = BuildMenu();
     }
 
     private ProjectRow? Selected => _grid.SelectedItem as ProjectRow;
+
+    private void DeleteSelected()
+    {
+        if (Selected is { } r) _ = _st.DeleteProject(r.Project);
+    }
 
     private void OpenSelected()
     {
@@ -127,7 +136,9 @@ public sealed class ProjectsView : UserControl
         edit.Click += (_, _) => { if (Selected is { } r) _ = _st.EditProject(r.Project); };
         var reveal = new MenuItem { Header = "نمایش پوشه در Explorer" };
         reveal.Click += (_, _) => { if (Selected is { } r) Shell.Reveal(r.Project.FullPath(_st.Root)); };
-        return new ContextMenu { Items = { open, client, edit, reveal, new Separator(), status } };
+        var delete = new MenuItem { Header = "حذف پروژه…" };
+        delete.Click += (_, _) => DeleteSelected();
+        return new ContextMenu { Items = { open, client, edit, reveal, new Separator(), status, new Separator(), delete } };
     }
 
     private void BuildChips()

@@ -183,6 +183,75 @@ public sealed class Workspace
         return created;
     }
 
+    // ---------- حذف و انتقال ----------
+
+    /// <summary>پوشه فقط وقتی به سطل بازیافت می‌رود که وجود داشته باشد و خود پوشه اصلی یا بالاتر از آن نباشد.</summary>
+    public static bool IsSafeToRecycle(string root, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return false;
+        var p = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var r = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var cmp = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (p.Length <= 4) return false;                       // ریشه درایو
+        return !string.Equals(p, r, cmp) && !r.StartsWith(p, cmp); // نه خود ریشه، نه پوشه‌ای که ریشه داخل آن است
+    }
+
+    /// <summary>تعداد و حجم فایل‌های یک پوشه (برای پنجره تأیید حذف).</summary>
+    public static (int Files, long Bytes, bool Capped) FolderStats(string dir, int cap = 200_000)
+    {
+        int files = 0;
+        long bytes = 0;
+        if (!Directory.Exists(dir)) return (0, 0, false);
+        try
+        {
+            foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+            {
+                files++;
+                try { bytes += new FileInfo(f).Length; } catch (IOException) { }
+                if (files >= cap) return (files, bytes, true);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        return (files, bytes, false);
+    }
+
+    /// <summary>
+    /// پروژه را از فهرست حذف می‌کند. اگر <paramref name="recycleFolder"/> درست باشد، ابتدا پوشه به سطل بازیافت می‌رود
+    /// (اگر نشد، چیزی از فهرست حذف نمی‌شود).
+    /// </summary>
+    public void DeleteProject(Project p, bool recycleFolder, Action<string>? recycler = null)
+    {
+        if (recycleFolder)
+        {
+            var path = p.FullPath(Root);
+            if (!IsSafeToRecycle(Root, path)) throw new IOException($"این پوشه به‌طور خودکار پاک نمی‌شود: {path}");
+            (recycler ?? RecycleBin.Send)(path);
+        }
+        Projects.Remove(p);
+        foreach (var other in Projects.Where(o => o.RelatedNumbers.Contains(p.Number)))
+            other.Related = string.Join(';', other.RelatedNumbers.Where(n => n != p.Number));
+        Save();
+    }
+
+    /// <summary>همه پروژه‌های یک متقاضی را به متقاضی دیگر می‌برد (مثلاً برای ادغام دو متقاضی تکراری).</summary>
+    public int MoveProjects(string fromClientId, string toClientId)
+    {
+        if (fromClientId == toClientId || Client(toClientId) == null) throw new ArgumentException("متقاضی مقصد نامعتبر است.");
+        var moved = Projects.Where(p => p.ClientId == fromClientId).ToList();
+        foreach (var p in moved) p.ClientId = toClientId;
+        Save();
+        return moved.Count;
+    }
+
+    /// <summary>فقط متقاضی بدون پروژه حذف می‌شود.</summary>
+    public void DeleteClient(Client c)
+    {
+        var n = Projects.Count(p => p.ClientId == c.Id);
+        if (n > 0) throw new InvalidOperationException($"این متقاضی {n} پروژه دارد؛ ابتدا پروژه‌هایش را منتقل یا حذف کنید.");
+        Clients.Remove(c);
+        Save();
+    }
+
     public Client AddClient(Client c)
     {
         c.Id = ClientStore.NextId(Clients);

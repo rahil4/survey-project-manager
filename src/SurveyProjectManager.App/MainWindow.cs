@@ -54,6 +54,7 @@ public sealed class MainWindow : Window
         {
             Show = ShowSection, OpenProject = OpenProject, RefreshAll = RefreshAll, Toast = ShowToast,
             NewProject = NewProjectAsync, EditProject = EditProjectAsync, EditClient = EditClientAsync, ChooseRoot = ChooseRootAsync,
+            DeleteProject = DeleteProjectAsync, DeleteClient = DeleteClientAsync, MoveClientProjects = MoveClientProjectsAsync,
         };
         ApplyTheme(cfg.Theme);
 
@@ -365,6 +366,70 @@ public sealed class MainWindow : Window
         dlg.ApplyEditTo(p);
         _st.Save(this);
         RefreshAll();
+    }
+
+    public async Task DeleteProjectAsync(Project p)
+    {
+        var dlg = new DeleteProjectDialog(_st, p);
+        await dlg.ShowDialog(this);
+        if (dlg.Accepted) await ApplyDeleteProjectAsync(p, dlg.DeleteFolder);
+    }
+
+    /// <summary>حذف واقعی پروژه (بعد از تأیید کاربر).</summary>
+    public async Task<bool> ApplyDeleteProjectAsync(Project p, bool deleteFolder)
+    {
+        try { _st.W.DeleteProject(p, deleteFolder); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            await MessageDialog.ShowAsync(this, "حذف پروژه ممکن نشد", e.Message + "\nچیزی از فهرست حذف نشد.");
+            return false;
+        }
+        _openTabs.Remove(p.Number);
+        _views.Remove(p.Number);
+        _st.Cfg.Recents.Remove(p.Number);
+        _st.SaveConfig();
+        if (_active == p.Number) _active = "home";
+        _st.InvalidateIndex();
+        ShowToast(deleteFolder ? $"پروژه {p.Number} حذف شد و پوشه آن به سطل بازیافت رفت" : $"پروژه {p.Number} از فهرست حذف شد (پوشه روی دیسک ماند)");
+        RefreshAll();
+        return true;
+    }
+
+    public async Task MoveClientProjectsAsync(Client c)
+    {
+        var count = _st.W.ProjectsOf(c.Id).Count();
+        if (count == 0) { await MessageDialog.ShowAsync(this, "انتقال پروژه‌ها", "این متقاضی پروژه‌ای ندارد."); return; }
+        if (_st.W.Clients.Count < 2) { await MessageDialog.ShowAsync(this, "انتقال پروژه‌ها", "متقاضی دیگری برای انتقال وجود ندارد. ابتدا یک متقاضی جدید بسازید."); return; }
+        var dlg = new MoveClientDialog(_st, c);
+        await dlg.ShowDialog(this);
+        if (!dlg.Accepted || dlg.SelectedTarget is not { } target) return;
+        try { _st.W.MoveProjects(c.Id, target.Id); }
+        catch (Exception e) when (e is IOException or ArgumentException) { await MessageDialog.ShowAsync(this, "انتقال ممکن نشد", e.Message); return; }
+        ShowToast($"{Digits.Fa(count)} پروژه به «{target.Name}» منتقل شد");
+        RefreshAll();
+    }
+
+    public async Task DeleteClientAsync(Client c)
+    {
+        var count = _st.W.ProjectsOf(c.Id).Count();
+        if (count > 0)
+        {
+            await MessageDialog.ShowAsync(this, "حذف متقاضی ممکن نیست",
+                $"«{c.Name}» {Digits.Fa(count)} پروژه دارد. ابتدا پروژه‌هایش را به متقاضی دیگری منتقل کنید (دکمه «انتقال پروژه‌ها») یا پروژه‌ها را حذف کنید.");
+            return;
+        }
+        if (!await MessageDialog.AskAsync(this, "حذف متقاضی", $"متقاضی «{c.Name}» از فهرست حذف شود؟")) return;
+        await ApplyDeleteClientAsync(c);
+    }
+
+    /// <summary>حذف واقعی متقاضی بدون پروژه (بعد از تأیید کاربر).</summary>
+    public async Task<bool> ApplyDeleteClientAsync(Client c)
+    {
+        try { _st.W.DeleteClient(c); }
+        catch (Exception e) when (e is IOException or InvalidOperationException) { await MessageDialog.ShowAsync(this, "حذف ممکن نشد", e.Message); return false; }
+        ShowToast($"متقاضی «{c.Name}» حذف شد");
+        ShowSection("clients");
+        return true;
     }
 
     public async Task EditClientAsync(Client? client)

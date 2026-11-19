@@ -27,6 +27,9 @@ public sealed class AppState
     public Func<string?, Task> NewProject { get; set; } = _ => Task.CompletedTask;
     public Func<Project, Task> EditProject { get; set; } = _ => Task.CompletedTask;
     public Func<Client?, Task> EditClient { get; set; } = _ => Task.CompletedTask;
+    public Func<Project, Task> DeleteProject { get; set; } = _ => Task.CompletedTask;
+    public Func<Client, Task> DeleteClient { get; set; } = _ => Task.CompletedTask;
+    public Func<Client, Task> MoveClientProjects { get; set; } = _ => Task.CompletedTask;
     public Func<Task> ChooseRoot { get; set; } = () => Task.CompletedTask;
 
     public void SaveConfig()

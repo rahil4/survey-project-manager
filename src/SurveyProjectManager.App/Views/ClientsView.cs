@@ -68,7 +68,20 @@ public sealed class ClientsView : UserControl
             }),
         });
         _grid.DoubleTapped += (_, _) => OpenSelected();
-        _grid.KeyDown += (_, e) => { if (e.Key == Key.Enter) { OpenSelected(); e.Handled = true; } };
+        _grid.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { OpenSelected(); e.Handled = true; }
+            else if (e.Key == Key.Delete && _grid.SelectedItem is ClientRow r) { _ = _st.DeleteClient(r.Client); e.Handled = true; }
+        };
+        var open = new MenuItem { Header = "باز کردن صفحه متقاضی" };
+        open.Click += (_, _) => OpenSelected();
+        var edit = new MenuItem { Header = "ویرایش" };
+        edit.Click += (_, _) => { if (_grid.SelectedItem is ClientRow r) _ = _st.EditClient(r.Client); };
+        var move = new MenuItem { Header = "انتقال پروژه‌ها به متقاضی دیگر…" };
+        move.Click += (_, _) => { if (_grid.SelectedItem is ClientRow r) _ = _st.MoveClientProjects(r.Client); };
+        var del = new MenuItem { Header = "حذف متقاضی…" };
+        del.Click += (_, _) => { if (_grid.SelectedItem is ClientRow r) _ = _st.DeleteClient(r.Client); };
+        _grid.ContextMenu = new ContextMenu { Items = { open, edit, move, new Separator(), del } };
         _search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Apply(); };
 
         var root = new DockPanel { Margin = new Thickness(24, 20) };

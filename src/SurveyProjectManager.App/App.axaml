@@ -117,6 +117,21 @@
       <Setter Property="Foreground" Value="{DynamicResource AccentFgBrush}" />
       <Setter Property="Opacity" Value="0.9" />
     </Style>
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="{DynamicResource StRegFg}" />
+      <Setter Property="Foreground" Value="{DynamicResource BgBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StRegFg}" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource StRegFg}" />
+      <Setter Property="Foreground" Value="{DynamicResource BgBrush}" />
+      <Setter Property="Opacity" Value="0.9" />
+    </Style>
+    <Style Selector="Button.warn"><Setter Property="Foreground" Value="{DynamicResource StRegFg}" /></Style>
+    <Style Selector="Button.warn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource StRegFg}" />
+    </Style>
     <Style Selector="Button.chip">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="12,2" />

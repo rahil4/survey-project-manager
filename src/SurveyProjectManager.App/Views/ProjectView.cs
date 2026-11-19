@@ -128,6 +128,10 @@ public sealed class ProjectView : UserControl
         row.Children.Add(link);
         Add(row);
         Add(UiBuild.Text("مالک ملک: " + _p.Owner, "muted"));
+        var delete = new Button { Content = "حذف پروژه…", Classes = { "link" }, Margin = new Thickness(0, 0, 18, 0) };
+        delete.Classes.Add("warn");
+        delete.Click += (_, _) => _ = _st.DeleteProject(_p);
+        _meta.Children.Add(delete);
         var rel = _st.W.RelatedTo(_p);
         if (rel.Count > 0)
         {

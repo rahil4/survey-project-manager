@@ -27,7 +27,7 @@ public sealed class ClientView : UserControl
         back.HorizontalAlignment = HorizontalAlignment.Right;
         root.Children.Add(back);
 
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,8,Auto") };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,8,Auto,8,Auto,8,Auto") };
         var info = new StackPanel { Spacing = 4 };
         var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
         title.Children.Add(UiBuild.Text(c.Name, "h1"));
@@ -49,6 +49,14 @@ public sealed class ClientView : UserControl
         var add = UiBuild.Btn($"+ پروژه جدید برای {c.Name}", () => _ = st.NewProject(c.Id), primary: true);
         Grid.SetColumn(add, 3);
         head.Children.Add(add);
+        var move = UiBuild.Btn("انتقال پروژه‌ها…", () => _ = st.MoveClientProjects(c));
+        move.IsVisible = projects.Count > 0 && w.Clients.Count > 1;
+        Grid.SetColumn(move, 5);
+        head.Children.Add(move);
+        var del = UiBuild.Btn("حذف متقاضی", () => _ = st.DeleteClient(c));
+        del.Classes.Add("warn");
+        Grid.SetColumn(del, 7);
+        head.Children.Add(del);
         root.Children.Add(UiBuild.Card(head));
 
         var repeated = w.RepeatedProperties(clientId);
@@ -122,8 +130,13 @@ public sealed class ClientView : UserControl
         grid.ItemsSource = view;
         grid.Height = Math.Max(140, 38 * rows.Count + 34 * Math.Max(1, years.Count) + 40);
         grid.DoubleTapped += (_, _) => { if (grid.SelectedItem is ProjectRow r) st.OpenProject(r.Number, null, null); };
+        var openItem = new MenuItem { Header = "ورود به پروژه" };
+        openItem.Click += (_, _) => { if (grid.SelectedItem is ProjectRow r) st.OpenProject(r.Number, null, null); };
+        var delItem = new MenuItem { Header = "حذف پروژه…" };
+        delItem.Click += (_, _) => { if (grid.SelectedItem is ProjectRow r) _ = st.DeleteProject(r.Project); };
+        grid.ContextMenu = new ContextMenu { Items = { openItem, new Separator(), delItem } };
         root.Children.Add(grid);
-        root.Children.Add(UiBuild.Text("دوبار کلیک روی پروژه، آن را باز می‌کند.", "muted"));
+        root.Children.Add(UiBuild.Text("دوبار کلیک روی پروژه، آن را باز می‌کند. راست‌کلیک: حذف پروژه.", "muted"));
         Content = new ScrollViewer { Content = root };
     }
 }

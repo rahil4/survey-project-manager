@@ -296,4 +296,103 @@ public class FeatureTests : IDisposable
         Assert.Equal(2, FileIndex.Search(w, idx, "احمدی").Projects.Count);
         Assert.Empty(FileIndex.Search(w, idx, "zzz").Files);
     }
+
+    // ---------- حذف و انتقال ----------
+    private Workspace TwoClients()
+    {
+        var w = new Workspace(_tmp);
+        w.Clients.Add(new Client { Id = "c1", Name = "احمدی" });
+        w.Clients.Add(new Client { Id = "c2", Name = "احمدی (تکراری)" });
+        foreach (var (n, c) in new[] { ("1404-001", "c1"), ("1405-001", "c1"), ("1405-002", "c2") })
+        {
+            var p = new Project { Number = n, ClientId = c, Owner = "احمدی", Location = "کرج", Folder = $"{n[..4]}/{n}_X" };
+            ProjectFolders.Create(_tmp, p, "UTM");
+            Touch(Path.Combine(p.FullPath(_tmp), "04_CAD", "a.dwg"));
+            w.Projects.Add(p);
+        }
+        Workspace.Link(w.Projects[0], w.Projects[1]);
+        w.Save();
+        return w;
+    }
+
+    [Fact]
+    public void DeleteProject_from_list_keeps_folder_and_cleans_related()
+    {
+        var w = TwoClients();
+        var gone = w.Find("1404-001")!;
+        var dir = gone.FullPath(_tmp);
+        w.DeleteProject(gone, recycleFolder: false);
+        Assert.Null(w.Find("1404-001"));
+        Assert.True(Directory.Exists(dir));                       // فایل‌ها دست‌نخورده
+        Assert.Equal("", w.Find("1405-001")!.Related);              // لینک مرتبط پاک شد
+        Assert.DoesNotContain(Workspace.Load(_tmp).Projects, p => p.Number == "1404-001");
+    }
+
+    [Fact]
+    public void DeleteProject_with_recycle_calls_recycler_and_aborts_on_failure()
+    {
+        var w = TwoClients();
+        var p = w.Find("1405-002")!;
+        var dir = p.FullPath(_tmp);
+        string? recycled = null;
+        w.DeleteProject(p, recycleFolder: true, recycler: path => { recycled = path; Directory.Delete(path, true); });
+        Assert.Equal(dir, recycled);
+        Assert.Null(w.Find("1405-002"));
+        Assert.False(Directory.Exists(dir));
+
+        var q = w.Find("1405-001")!;
+        Assert.Throws<IOException>(() => w.DeleteProject(q, true, _ => throw new IOException("fail")));
+        Assert.NotNull(w.Find("1405-001")); // خطا شد: چیزی از فهرست حذف نشد
+    }
+
+    [Fact]
+    public void IsSafeToRecycle_refuses_root_parents_and_missing_folders()
+    {
+        var root = Dir("root");
+        var sub = Dir("root", "1405", "p");
+        Directory.CreateDirectory(sub);
+        Assert.True(Workspace.IsSafeToRecycle(root, sub));
+        Assert.False(Workspace.IsSafeToRecycle(root, root));
+        Assert.False(Workspace.IsSafeToRecycle(root, _tmp));              // بالاتر از ریشه
+        Assert.False(Workspace.IsSafeToRecycle(root, Dir("root", "nope"))); // وجود ندارد
+        Assert.False(Workspace.IsSafeToRecycle(root, ""));
+    }
+
+    [Fact]
+    public void DeleteClient_is_blocked_until_projects_are_moved()
+    {
+        var w = TwoClients();
+        var dup = w.Client("c2")!;
+        var ex = Assert.Throws<InvalidOperationException>(() => w.DeleteClient(dup));
+        Assert.Contains("1", ex.Message);
+        Assert.Equal(1, w.MoveProjects("c2", "c1"));
+        Assert.Equal("c1", w.Find("1405-002")!.ClientId);
+        w.DeleteClient(dup);
+        Assert.Null(w.Client("c2"));
+        Assert.Equal(3, w.ProjectsOf("c1").Count());
+        Assert.Single(Workspace.Load(_tmp).Clients);
+        Assert.Throws<ArgumentException>(() => w.MoveProjects("c1", "c1"));
+        Assert.Throws<ArgumentException>(() => w.MoveProjects("c1", "zzz"));
+    }
+
+    [Fact]
+    public void FolderStats_counts_files_and_bytes()
+    {
+        Touch(Dir("s", "a.txt"), "12345");
+        Touch(Dir("s", "sub", "b.txt"), "123");
+        Assert.Equal((2, 8L, false), FolderStatsOf(Dir("s")));
+        Assert.Equal((0, 0L, false), FolderStatsOf(Dir("missing")));
+    }
+
+    private static (int, long, bool) FolderStatsOf(string d) => Workspace.FolderStats(d);
+
+    [Fact]
+    public void RecycleBin_removes_folder_on_windows()
+    {
+        if (!OperatingSystem.IsWindows()) { Assert.False(RecycleBin.IsSupported); return; }
+        var d = Dir("recycle_me");
+        Touch(Path.Combine(d, "x.txt"));
+        RecycleBin.Send(d);
+        Assert.False(Directory.Exists(d));
+    }
 }

@@ -315,6 +315,47 @@ public class UiTests : IDisposable
     }
 
     [AvaloniaFact]
+    public async Task Delete_project_and_client_flow()
+    {
+        Seed();
+        var w = OpenWindow();
+        var ws = w.State.W; // نمونه‌ای که پنجره بارگذاری کرده
+        w.OpenProject("1405-001");
+        w.ShowSection("client", ws.Find("1405-001")!.ClientId);
+        Shot(w, "client_with_delete.png");
+
+        var p = ws.Find("1405-001")!;
+        var dir = p.FullPath(_root);
+        var dlg = new DeleteProjectDialog(w.State, p);
+        dlg.Show();
+        Assert.True(dlg.ListOnly.IsChecked);
+        Assert.Equal(RecycleBin.IsSupported, dlg.WithFolder.IsEnabled);
+        Shot(dlg, "delete_dialog.png");
+        dlg.Confirm();
+        Assert.True(dlg.Accepted);
+        Assert.False(dlg.DeleteFolder);
+        dlg.Close();
+
+        Assert.True(await w.ApplyDeleteProjectAsync(p, deleteFolder: false));
+        Assert.Null(ws.Find("1405-001"));
+        Assert.True(Directory.Exists(dir)); // فایل‌ها دست‌نخورده
+        Assert.Empty(w.OpenTabs);           // تب بسته شد
+        Assert.DoesNotContain("1405-001", w.State.Cfg.Recents);
+        Assert.Contains("از فهرست حذف شد", w.ToastText);
+
+        // متقاضی دارای پروژه حذف نمی‌شود؛ بعد از انتقال حذف می‌شود
+        var taheri = ws.Clients.First(c => c.Name.Contains("طاهری"));
+        var rezaei = ws.Clients.First(c => c.Name.Contains("رضایی"));
+        Assert.Throws<InvalidOperationException>(() => ws.DeleteClient(rezaei));
+        ws.MoveProjects(rezaei.Id, taheri.Id);
+        Assert.True(await w.ApplyDeleteClientAsync(rezaei));
+        Assert.Null(ws.Client(rezaei.Id));
+        Assert.IsType<ClientsView>(w.CurrentContent);
+        Shot(w, "clients_after_delete.png");
+        Assert.Equal(ws.Clients.Count, Workspace.Load(_root).Clients.Count);
+    }
+
+    [AvaloniaFact]
     public void Preview_renders_pdf_first_page_and_images()
     {
         // یک PDF حداقلی یک‌صفحه‌ای
